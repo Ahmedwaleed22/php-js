@@ -1,10 +1,23 @@
 import { handlePhpjsElement } from './process-phpjs-tags.js';
+// Counter for generating unique IDs
+let tagIdCounter = 0;
+// Helper function to ensure an element has a data-phpjs-tag-id
+function ensurePhpjsTagId(el) {
+    if (!el.getAttribute('data-phpjs-tag-id')) {
+        el.setAttribute('data-phpjs-tag-id', crypto.randomUUID().slice(0, 8));
+    }
+}
 // Exported so it can be imported from `phpjs.ts`
 export function scanForPhpjs(root = document) {
-    // Narrow to a type that definitely has getElementsByTagName
+    // Narrow to a type that definitely has querySelectorAll
     const container = root;
-    const phpjs = container.querySelector('template[data-phpjs]');
-    return phpjs ? [phpjs] : [];
+    const phpjsElements = container.querySelectorAll('template[data-phpjs]');
+    const results = [];
+    phpjsElements.forEach(el => {
+        ensurePhpjsTagId(el);
+        results.push(el);
+    });
+    return results;
 }
 // Run once when the DOM is ready so we catch any <phpjs> already in the page
 if (document.readyState === 'loading') {
@@ -23,9 +36,11 @@ const observer = new MutationObserver(mutations => {
             const el = node;
             // If the added node itself is <phpjs>, handle it
             if (el.tagName.toLowerCase() === 'template' && el.getAttribute('data-phpjs')) {
+                ensurePhpjsTagId(el);
                 handlePhpjsElement(el);
             }
             // Also scan inside it for any nested <phpjs>
+            // scanForPhpjs will assign IDs to all found elements
             scanForPhpjs(el);
         });
     }
