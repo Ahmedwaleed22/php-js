@@ -1,3 +1,5 @@
+import { handleEcho } from "../php-codes/echo.js";
+
 // Keep track of which <phpjs> elements we've already handled
 const processedPhpjs = new WeakSet<Element>();
 const variables = new Map<string, string>();
@@ -69,13 +71,7 @@ export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null)
     
     switch (lineArr[0].toLowerCase()) {
       case 'echo':
-        // console.log(handleTemplateLiteral(lineArr[1] || '').trim());
-        const templateLiteral = handleTemplateLiteral(lineArr[1] || '').trim();
-        console.log(templateLiteral);
-
-        if (preTemplateContainer) {
-          preTemplateContainer.innerHTML += templateLiteral;
-        }
+        handleEcho(lineArr, preTemplateContainer);
         break;
       default:
         if (lineArr[0].startsWith('$')) {
