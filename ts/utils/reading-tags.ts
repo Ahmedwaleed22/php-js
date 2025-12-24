@@ -1,4 +1,5 @@
 import { handlePhpjsElement } from './process-phpjs-tags.js';
+import { processPreTemplateContainer } from './process-pre-template-container.js';
 
 // Counter for generating unique IDs
 let tagIdCounter = 0;
@@ -19,6 +20,7 @@ export function scanForPhpjs(root: ParentNode | Document = document) {
   
   phpjsElements.forEach(el => {
     ensurePhpjsTagId(el);
+    processPreTemplateContainer(el);
     results.push(el);
   });
   
