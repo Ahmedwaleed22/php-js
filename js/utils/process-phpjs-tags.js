@@ -1,13 +1,20 @@
 import { handleEcho } from "../php-codes/echo.js";
 import { handleConcatination } from "../php-codes/concatination.js";
 import { evaluateExpression } from "./expression-evaluator.js";
-import { parseArrayLiteral, getArrayElement, setArrayElement } from "./array-handler.js";
+import { parseArrayLiteral, setArrayElement } from "./array-handler.js";
 import { parseFunctionDefinition, parseFunctionCall, callFunction, defineFunction } from "../php-codes/functions.js";
 import { parseForLoop, parseWhileLoop, parseForeachLoop, executeForLoop, executeWhileLoop, executeForeachLoop } from "../php-codes/loops.js";
 import { evaluateCondition } from "../php-codes/conditionals.js";
 import { formatError } from "./error-handler.js";
 // Keep track of which <phpjs> elements we've already handled
 const processedPhpjs = new WeakSet();
+// Return value exception for function returns
+export class ReturnException extends Error {
+    constructor(value) {
+        super('return');
+        this.value = value;
+    }
+}
 // Global scope - shared across all templates to persist variables
 const globalScope = { variables: new Map() };
 let currentScope = globalScope;
@@ -451,26 +458,14 @@ export function evalPhpJs(phpCode, preTemplateContainer, lineOffset = 0) {
                     continue;
                 }
             }
-            // Handle function calls
-            const funcCall = parseFunctionCall(line);
-            if (funcCall) {
-                const result = callFunction(funcCall.name, funcCall.args, (code) => evalPhpJs(code, preTemplateContainer, currentLine), getVariableFromScope, setVariableInScope);
-                // If function returns a value and it's assigned to a variable
-                const assignMatch = line.match(/^\$(\w+)\s*=\s*(.+)/);
-                if (assignMatch && result !== undefined) {
-                    setVariableInScope(assignMatch[1], String(result));
+            // Handle return statements
+            if (line.toLowerCase().startsWith('return')) {
+                const returnMatch = line.match(/return\s+(.*)/i);
+                if (returnMatch) {
+                    const returnValue = returnMatch[1].trim();
+                    const evaluated = evaluateExpression(returnValue);
+                    throw new ReturnException(evaluated);
                 }
-                i++;
-                continue;
-            }
-            // Handle array access like $arr[0]
-            const arrayAccessMatch = line.match(/^\$(\w+)\[(\d+|\w+)\]/);
-            if (arrayAccessMatch && !line.includes('=')) {
-                // Just reading array element, can be used in echo or expressions
-                const arrayName = arrayAccessMatch[1];
-                const index = arrayAccessMatch[2];
-                const element = getArrayElement(arrayName, index);
-                // This would be used in expressions, handled elsewhere
             }
             const lineArr = tokenizeLine(line);
             switch (lineArr[0].toLowerCase()) {
@@ -487,12 +482,24 @@ export function evalPhpJs(phpCode, preTemplateContainer, lineOffset = 0) {
                     }
                     else {
                         // Has concatenation operator or single token - use handleConcatination
-                        const concatinatedString = handleConcatination(extractString, preTemplateContainer) || '';
+                        const concatinatedString = handleConcatination(extractString, preTemplateContainer, (code) => evalPhpJs(code, preTemplateContainer, currentLine), setVariableInScope) || '';
                         handleEcho(concatinatedString, preTemplateContainer);
                     }
                     break;
                 default:
-                    if (lineArr[0].startsWith('$')) {
+                    // Handle function calls (only if not already handled by echo)
+                    const funcCall = parseFunctionCall(line);
+                    if (funcCall) {
+                        const result = callFunction(funcCall.name, funcCall.args, (code) => evalPhpJs(code, preTemplateContainer, currentLine), getVariableFromScope, setVariableInScope);
+                        // If function returns a value and it's assigned to a variable
+                        const assignMatch = line.match(/^\$(\w+)\s*=\s*(.+)/);
+                        if (assignMatch && result !== undefined) {
+                            setVariableInScope(assignMatch[1], String(result));
+                        }
+                        // Otherwise, if result is not undefined and not assigned, we could echo it
+                        // But for now, we'll just discard it (PHP behavior - function calls without echo don't output)
+                    }
+                    else if (lineArr[0].startsWith('$')) {
                         // Handle variable assignment
                         const varName = lineArr[0].slice(1);
                         // Join all tokens after the variable name and remove the '=' sign
@@ -508,14 +515,28 @@ export function evalPhpJs(phpCode, preTemplateContainer, lineOffset = 0) {
             i++;
         }
         catch (error) {
-            const errorMsg = formatError({
-                message: error.message || "Unknown error",
-                line: currentLine,
-                code: "RUNTIME_ERROR",
-                context: line
-            });
-            if (preTemplateContainer) {
-                preTemplateContainer.innerHTML += errorMsg;
+            // If it's a return statement outside a function, that's an error
+            if (error instanceof ReturnException) {
+                const errorMsg = formatError({
+                    message: "return statement outside function",
+                    line: currentLine,
+                    code: "SYNTAX_ERROR",
+                    context: line
+                });
+                if (preTemplateContainer) {
+                    preTemplateContainer.innerHTML += errorMsg;
+                }
+            }
+            else {
+                const errorMsg = formatError({
+                    message: error.message || "Unknown error",
+                    line: currentLine,
+                    code: "RUNTIME_ERROR",
+                    context: line
+                });
+                if (preTemplateContainer) {
+                    preTemplateContainer.innerHTML += errorMsg;
+                }
             }
             i++;
         }

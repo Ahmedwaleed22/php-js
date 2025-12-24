@@ -1,24 +1,27 @@
 // handle concatination of strings
 
-import { handleTemplateLiteral, getVariableValue } from "../utils/process-phpjs-tags.js";
+import { handleTemplateLiteral, getVariableValue, setVariableValue } from "../utils/process-phpjs-tags.js";
 import { getArrayElement } from "../utils/array-handler.js";
 import { parseFunctionCall, callFunction } from "./functions.js";
 import { evaluateExpression } from "../utils/expression-evaluator.js";
 
-export function handleConcatination(extractString: Array<string>, preTemplateContainer: Element | null) {
+export function handleConcatination(extractString: Array<string>, preTemplateContainer: Element | null, executeCode?: (code: string) => void, setVar?: (name: string, value: string) => void) {
   let resultString = '';
   
   extractString.forEach((string) => {
     if (string !== '' && string !== '.') {
+      // Strip trailing semicolon if present
+      const trimmedString = string.trim().replace(/;+$/, '');
+      
       // Handle function calls
-      const funcCall = parseFunctionCall(string);
+      const funcCall = parseFunctionCall(trimmedString);
       if (funcCall) {
         const result = callFunction(
           funcCall.name,
           funcCall.args,
-          () => {}, // Empty executor for function calls in echo
+          executeCode || (() => {}), // Use provided executor or empty function
           getVariableValue,
-          () => {} // Empty setter for function calls in echo
+          setVar || (() => {}) // Use provided setter or empty function
         );
         if (result !== undefined) {
           resultString += String(result);

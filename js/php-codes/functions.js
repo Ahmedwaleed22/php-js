@@ -1,9 +1,11 @@
 // Function definition and calling
+import { ReturnException } from '../utils/process-phpjs-tags.js';
 import { stringFunctions } from '../utils/string-functions.js';
 import { evaluateExpression } from '../utils/expression-evaluator.js';
 const userFunctions = new Map();
 export function defineFunction(name, params, code) {
     userFunctions.set(name.toLowerCase(), { name, params, code });
+    console.log('Function defined:', name, params, code);
 }
 export function getFunction(name) {
     return userFunctions.get(name.toLowerCase());
@@ -93,8 +95,26 @@ export function callFunction(name, args, executeCode, getVar, setVar) {
         const argValue = index < args.length ? evaluateExpression(args[index]) : undefined;
         setVar(param, argValue !== undefined ? String(argValue) : '');
     });
-    // Execute function code
-    executeCode(func.code);
+    let returnValue = undefined;
+    try {
+        // Execute function code
+        executeCode(func.code);
+    }
+    catch (e) {
+        if (e instanceof ReturnException) {
+            returnValue = e.value;
+        }
+        else {
+            // Restore variable scope before re-throwing
+            func.params.forEach(param => {
+                const saved = savedVars.get(param);
+                if (saved !== undefined) {
+                    setVar(param, saved);
+                }
+            });
+            throw e;
+        }
+    }
     // Restore variable scope
     func.params.forEach(param => {
         const saved = savedVars.get(param);
@@ -106,5 +126,5 @@ export function callFunction(name, args, executeCode, getVar, setVar) {
             // Note: We'd need a removeVariable function for this
         }
     });
-    return undefined;
+    return returnValue;
 }

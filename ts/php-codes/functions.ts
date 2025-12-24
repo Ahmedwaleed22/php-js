@@ -1,6 +1,6 @@
 // Function definition and calling
 
-import { getVariableValue, setVariableValue } from '../utils/process-phpjs-tags.js';
+import { getVariableValue, setVariableValue, ReturnException } from '../utils/process-phpjs-tags.js';
 import { stringFunctions } from '../utils/string-functions.js';
 import { evaluateExpression } from '../utils/expression-evaluator.js';
 import { getArrayElement } from '../utils/array-handler.js';
@@ -15,6 +15,7 @@ const userFunctions = new Map<string, PhpFunction>();
 
 export function defineFunction(name: string, params: string[], code: string): void {
   userFunctions.set(name.toLowerCase(), { name, params, code });
+  console.log('Function defined:', name, params, code);
 }
 
 export function getFunction(name: string): PhpFunction | undefined {
@@ -112,8 +113,24 @@ export function callFunction(name: string, args: string[], executeCode: (code: s
     setVar(param, argValue !== undefined ? String(argValue) : '');
   });
   
-  // Execute function code
-  executeCode(func.code);
+  let returnValue: any = undefined;
+  try {
+    // Execute function code
+    executeCode(func.code);
+  } catch (e) {
+    if (e instanceof ReturnException) {
+      returnValue = e.value;
+    } else {
+      // Restore variable scope before re-throwing
+      func.params.forEach(param => {
+        const saved = savedVars.get(param);
+        if (saved !== undefined) {
+          setVar(param, saved);
+        }
+      });
+      throw e;
+    }
+  }
   
   // Restore variable scope
   func.params.forEach(param => {
@@ -126,6 +143,6 @@ export function callFunction(name: string, args: string[], executeCode: (code: s
     }
   });
   
-  return undefined;
+  return returnValue;
 }
 

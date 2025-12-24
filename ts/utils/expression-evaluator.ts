@@ -1,6 +1,7 @@
 // Expression evaluator for arithmetic, comparison, and logical operations
 
 import { getVariableValue } from './process-phpjs-tags.js';
+import { parseFunctionCall, callFunction } from '../php-codes/functions.js';
 
 export type ValueType = string | number | boolean | null | undefined;
 
@@ -113,7 +114,7 @@ export function toBoolean(value: ValueType): boolean {
 
 // Parse and evaluate a simple expression (handles basic arithmetic and comparisons)
 export function evaluateExpression(expression: string): ValueType {
-  const trimmed = expression.trim();
+  const trimmed = expression.trim().replace(/;+$/, ''); // Strip trailing semicolons
   
   // Handle parentheses (simple case - just remove them for now)
   let expr = trimmed.replace(/^\(|\)$/g, '');
@@ -151,6 +152,21 @@ export function evaluateExpression(expression: string): ValueType {
         const result = evaluateArithmetic(left, op, right);
         if (result !== null) return result;
       }
+    }
+  }
+  
+  // Check for function calls
+  const funcCall = parseFunctionCall(expr);
+  if (funcCall) {
+    const result = callFunction(
+      funcCall.name,
+      funcCall.args,
+      () => {}, // Empty executor - function calls in expressions shouldn't execute code
+      getVariableValue,
+      () => {} // Empty setter
+    );
+    if (result !== undefined) {
+      return result;
     }
   }
   
