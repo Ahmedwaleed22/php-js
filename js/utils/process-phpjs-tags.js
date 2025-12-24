@@ -1,4 +1,5 @@
 import { handleEcho } from "../php-codes/echo.js";
+import { handleConcatination } from "../php-codes/concatination.js";
 // Keep track of which <phpjs> elements we've already handled
 const processedPhpjs = new WeakSet();
 const variables = new Map();
@@ -61,7 +62,9 @@ export function evalPhpJs(phpCode, preTemplateContainer) {
         // console.log(lineArr);
         switch (lineArr[0].toLowerCase()) {
             case 'echo':
-                handleEcho(lineArr, preTemplateContainer);
+                const extractString = lineArr.splice(1, lineArr.length - 1);
+                const concatinatedString = handleConcatination(extractString, preTemplateContainer) || '';
+                handleEcho(concatinatedString, preTemplateContainer);
                 break;
             default:
                 if (lineArr[0].startsWith('$')) {

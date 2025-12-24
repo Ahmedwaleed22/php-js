@@ -1,10 +1,8 @@
-import { handleTemplateLiteral } from "../utils/process-phpjs-tags.js";
-export function handleEcho(lineArr, preTemplateContainer) {
-    const templateLiteral = handleTemplateLiteral(lineArr[1] || '').trim();
+export function handleEcho(concatinatedString, preTemplateContainer) {
     if (preTemplateContainer) {
-        preTemplateContainer.innerHTML += templateLiteral;
+        preTemplateContainer.innerHTML += concatinatedString;
     }
     else {
-        console.log(templateLiteral);
+        console.log(concatinatedString);
     }
 }
