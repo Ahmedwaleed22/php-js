@@ -7,6 +7,21 @@
     <script type="module" src="./js/phpjs.js"></script>
   </head>
   <body>
-    
+    <template data-phpjs>
+      function greet($name) {
+        return "Hello, " . $name;
+      }
+      
+      echo greet("John");
+    </template>
+
+    <template data-phpjs>
+      $age = 18;
+      if ($age >= 18) {
+        echo "You are an adult";
+      } else {
+        echo "You are a minor";
+      }
+    </template>
   </body>
 </html>

@@ -119,6 +119,56 @@ export function evaluateExpression(expression: string): ValueType {
   // Handle parentheses (simple case - just remove them for now)
   let expr = trimmed.replace(/^\(|\)$/g, '');
   
+  // Check for PHP string concatenation operator (.) first
+  // Need to handle carefully to avoid matching decimal numbers
+  const concatParts: string[] = [];
+  let currentPart = '';
+  let inString = false;
+  let stringChar = '';
+  
+  for (let i = 0; i < expr.length; i++) {
+    const char = expr[i];
+    
+    if (!inString && (char === '"' || char === "'")) {
+      inString = true;
+      stringChar = char;
+      currentPart += char;
+    } else if (inString && char === stringChar && expr[i - 1] !== '\\') {
+      inString = false;
+      currentPart += char;
+    } else if (!inString && char === '.') {
+      // Check if this is a decimal point in a number
+      const beforeDot = currentPart.trim();
+      const afterDot = expr.substring(i + 1).trim();
+      const isDecimal = /\d$/.test(beforeDot) && /^\d/.test(afterDot);
+      
+      if (!isDecimal) {
+        // This is a concatenation operator
+        if (currentPart.trim()) {
+          concatParts.push(currentPart.trim());
+        }
+        currentPart = '';
+      } else {
+        currentPart += char;
+      }
+    } else {
+      currentPart += char;
+    }
+  }
+  if (currentPart.trim()) {
+    concatParts.push(currentPart.trim());
+  }
+  
+  // If we have multiple parts, it's a concatenation
+  if (concatParts.length > 1) {
+    let result = '';
+    for (const part of concatParts) {
+      const value = getValue(part);
+      result += value !== undefined && value !== null ? String(value) : '';
+    }
+    return result;
+  }
+  
   // Check for comparison operators
   const comparisonOps = ['===', '!==', '==', '!=', '<=', '>=', '<', '>'];
   for (const op of comparisonOps) {

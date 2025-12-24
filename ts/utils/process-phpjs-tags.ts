@@ -291,7 +291,7 @@ function parseCodeBlock(code: string, startIndex: number): { code: string; endIn
   return { code: blockCode, endIndex: i };
 }
 
-// Parse statements from code (handles multi-line constructs)
+// Parse statements from code (handles multi-line constructs including blocks)
 function parseStatements(code: string): Array<{ type: string; content: string; startPos: number; endPos: number }> {
   const statements: Array<{ type: string; content: string; startPos: number; endPos: number }> = [];
   let i = 0;
@@ -301,6 +301,7 @@ function parseStatements(code: string): Array<{ type: string; content: string; s
   let parenDepth = 0;
   let inString = false;
   let stringChar = '';
+  let inBlockStatement = false; // Track if we're in a block statement (if, for, while, foreach, function)
   
   while (i < code.length) {
     const char = code[i];
@@ -327,14 +328,48 @@ function parseStatements(code: string): Array<{ type: string; content: string; s
       continue;
     }
     
+    // Check if we're starting a block statement
+    if (braceDepth === 0 && parenDepth === 0 && !inBlockStatement) {
+      const trimmedSoFar = currentStatement.trim().toLowerCase();
+      if (trimmedSoFar.match(/^(if|elseif|else|for|while|foreach|function)\b/)) {
+        inBlockStatement = true;
+      }
+    }
+    
     // Track braces and parentheses
-    if (char === '{') braceDepth++;
-    if (char === '}') braceDepth--;
+    if (char === '{') {
+      braceDepth++;
+      currentStatement += char;
+      i++;
+      continue;
+    }
+    if (char === '}') {
+      braceDepth--;
+      currentStatement += char;
+      
+      // If we're closing the last brace of a block statement, end the statement
+      if (inBlockStatement && braceDepth === 0) {
+        const trimmed = currentStatement.trim();
+        if (trimmed) {
+          statements.push({
+            type: 'block',
+            content: trimmed,
+            startPos,
+            endPos: i
+          });
+        }
+        currentStatement = '';
+        startPos = i + 1;
+        inBlockStatement = false;
+      }
+      i++;
+      continue;
+    }
     if (char === '(') parenDepth++;
     if (char === ')') parenDepth--;
     
-    // Statement separator (semicolon) when not in braces/parens
-    if (char === ';' && braceDepth === 0 && parenDepth === 0) {
+    // Statement separator (semicolon) when not in braces/parens and not in a block statement
+    if (char === ';' && braceDepth === 0 && parenDepth === 0 && !inBlockStatement) {
       const trimmed = currentStatement.trim();
       if (trimmed) {
         statements.push({
@@ -368,6 +403,38 @@ function parseStatements(code: string): Array<{ type: string; content: string; s
   return statements;
 }
 
+// Helper function to extract block code from a statement that contains { ... }
+function extractBlockFromStatement(stmtContent: string): string | null {
+  const braceStart = stmtContent.indexOf('{');
+  if (braceStart === -1) return null;
+  
+  // Find the matching closing brace
+  let braceCount = 0;
+  let inString = false;
+  let stringChar = '';
+  
+  for (let i = braceStart; i < stmtContent.length; i++) {
+    const char = stmtContent[i];
+    
+    if (!inString && (char === '"' || char === "'")) {
+      inString = true;
+      stringChar = char;
+    } else if (inString && char === stringChar && stmtContent[i - 1] !== '\\') {
+      inString = false;
+    } else if (!inString) {
+      if (char === '{') braceCount++;
+      if (char === '}') braceCount--;
+      
+      if (braceCount === 0) {
+        // Extract content between braces
+        return stmtContent.substring(braceStart + 1, i);
+      }
+    }
+  }
+  
+  return null;
+}
+
 export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null, lineOffset: number = 0) {
   // Remove comments first
   const codeWithoutComments = removeComments(phpCode.trim());
@@ -375,6 +442,7 @@ export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null,
   
   let currentLine = lineOffset;
   let i = 0;
+  let conditionExecuted = false; // Track if an if/elseif condition was satisfied
   
   while (i < statements.length) {
     const stmt = statements[i];
@@ -382,40 +450,18 @@ export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null,
     currentLine = lineOffset + i + 1;
     
     try {
-      // Handle if/elseif/else statements
-      if (line.toLowerCase().startsWith('if')) {
+      // Handle if/elseif/else statements (block type)
+      if (stmt.type === 'block' && line.toLowerCase().startsWith('if') && !line.toLowerCase().startsWith('if(')) {
+        // Reset for new if chain
+        conditionExecuted = false;
         const ifMatch = line.match(/if\s*\(\s*(.+?)\s*\)/i);
         if (ifMatch) {
           const condition = ifMatch[1];
-          // Find the opening brace after the condition
-          let bracePos = stmt.endPos;
-          while (bracePos < codeWithoutComments.length && codeWithoutComments[bracePos] !== '{') {
-            bracePos++;
-          }
-          const block = parseCodeBlock(codeWithoutComments, bracePos);
-          if (block) {
+          const blockCode = extractBlockFromStatement(line);
+          if (blockCode !== null) {
             if (evaluateCondition(condition)) {
-              evalPhpJs(block.code, preTemplateContainer, currentLine);
-            }
-            // Skip to after the block
-            i++;
-            continue;
-          }
-        }
-      }
-      
-      if (line.toLowerCase().startsWith('elseif')) {
-        const elseifMatch = line.match(/elseif\s*\(\s*(.+?)\s*\)/i);
-        if (elseifMatch) {
-          const condition = elseifMatch[1];
-          let bracePos = stmt.endPos;
-          while (bracePos < codeWithoutComments.length && codeWithoutComments[bracePos] !== '{') {
-            bracePos++;
-          }
-          const block = parseCodeBlock(codeWithoutComments, bracePos);
-          if (block) {
-            if (evaluateCondition(condition)) {
-              evalPhpJs(block.code, preTemplateContainer, currentLine);
+              evalPhpJs(blockCode, preTemplateContainer, currentLine);
+              conditionExecuted = true;
             }
             i++;
             continue;
@@ -423,31 +469,71 @@ export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null,
         }
       }
       
-      if (line.toLowerCase().startsWith('else')) {
-        let bracePos = stmt.endPos;
-        while (bracePos < codeWithoutComments.length && codeWithoutComments[bracePos] !== '{') {
-          bracePos++;
+      // Also handle "if(" without space
+      if (stmt.type === 'block' && line.toLowerCase().startsWith('if(')) {
+        // Reset for new if chain
+        conditionExecuted = false;
+        const ifMatch = line.match(/if\s*\(\s*(.+?)\s*\)/i);
+        if (ifMatch) {
+          const condition = ifMatch[1];
+          const blockCode = extractBlockFromStatement(line);
+          if (blockCode !== null) {
+            if (evaluateCondition(condition)) {
+              evalPhpJs(blockCode, preTemplateContainer, currentLine);
+              conditionExecuted = true;
+            }
+            i++;
+            continue;
+          }
         }
-        const block = parseCodeBlock(codeWithoutComments, bracePos);
-        if (block) {
-          evalPhpJs(block.code, preTemplateContainer, currentLine);
+      }
+      
+      if (stmt.type === 'block' && line.toLowerCase().startsWith('elseif')) {
+        // Only evaluate if no previous condition in chain was true
+        if (!conditionExecuted) {
+          const elseifMatch = line.match(/elseif\s*\(\s*(.+?)\s*\)/i);
+          if (elseifMatch) {
+            const condition = elseifMatch[1];
+            const blockCode = extractBlockFromStatement(line);
+            if (blockCode !== null) {
+              if (evaluateCondition(condition)) {
+                evalPhpJs(blockCode, preTemplateContainer, currentLine);
+                conditionExecuted = true;
+              }
+            }
+          }
         }
         i++;
         continue;
       }
       
-      // Handle for loops
-      if (line.toLowerCase().startsWith('for')) {
-        const forMatch = line.match(/for\s*\((.+?)\)/i);
-        if (forMatch) {
-          const loop = parseForLoop(line);
-          let bracePos = stmt.endPos;
-          while (bracePos < codeWithoutComments.length && codeWithoutComments[bracePos] !== '{') {
-            bracePos++;
+      if (stmt.type === 'block' && line.toLowerCase().startsWith('else') && !line.toLowerCase().startsWith('elseif')) {
+        // Only execute if no previous condition in chain was true
+        if (!conditionExecuted) {
+          const blockCode = extractBlockFromStatement(line);
+          if (blockCode !== null) {
+            evalPhpJs(blockCode, preTemplateContainer, currentLine);
           }
-          const block = parseCodeBlock(codeWithoutComments, bracePos);
-          if (loop && block) {
-            loop.code = block.code;
+        }
+        // Reset after else block (end of if chain)
+        conditionExecuted = false;
+        i++;
+        continue;
+      }
+      
+      // For any non-conditional statement, reset the conditionExecuted flag
+      // This ensures that a new if chain starts fresh
+      if (stmt.type !== 'block' || (!line.toLowerCase().startsWith('if') && !line.toLowerCase().startsWith('elseif') && !line.toLowerCase().startsWith('else'))) {
+        conditionExecuted = false;
+      }
+      
+      // Handle for loops
+      if (stmt.type === 'block' && line.toLowerCase().startsWith('for') && !line.toLowerCase().startsWith('foreach')) {
+        const loop = parseForLoop(line);
+        if (loop) {
+          const blockCode = extractBlockFromStatement(line);
+          if (blockCode !== null) {
+            loop.code = blockCode;
             executeForLoop(loop, (code) => {
               evalPhpJs(code, preTemplateContainer, currentLine);
             });
@@ -458,17 +544,12 @@ export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null,
       }
       
       // Handle while loops
-      if (line.toLowerCase().startsWith('while')) {
-        const whileMatch = line.match(/while\s*\(\s*(.+?)\s*\)/i);
-        if (whileMatch) {
-          const loop = parseWhileLoop(line);
-          let bracePos = stmt.endPos;
-          while (bracePos < codeWithoutComments.length && codeWithoutComments[bracePos] !== '{') {
-            bracePos++;
-          }
-          const block = parseCodeBlock(codeWithoutComments, bracePos);
-          if (loop && block) {
-            loop.code = block.code;
+      if (stmt.type === 'block' && line.toLowerCase().startsWith('while')) {
+        const loop = parseWhileLoop(line);
+        if (loop) {
+          const blockCode = extractBlockFromStatement(line);
+          if (blockCode !== null) {
+            loop.code = blockCode;
             executeWhileLoop(loop, (code) => {
               evalPhpJs(code, preTemplateContainer, currentLine);
             });
@@ -479,17 +560,12 @@ export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null,
       }
       
       // Handle foreach loops
-      if (line.toLowerCase().startsWith('foreach')) {
-        const foreachMatch = line.match(/foreach\s*\((.+?)\)/i);
-        if (foreachMatch) {
-          const loop = parseForeachLoop(line);
-          let bracePos = stmt.endPos;
-          while (bracePos < codeWithoutComments.length && codeWithoutComments[bracePos] !== '{') {
-            bracePos++;
-          }
-          const block = parseCodeBlock(codeWithoutComments, bracePos);
-          if (loop && block) {
-            loop.code = block.code;
+      if (stmt.type === 'block' && line.toLowerCase().startsWith('foreach')) {
+        const loop = parseForeachLoop(line);
+        if (loop) {
+          const blockCode = extractBlockFromStatement(line);
+          if (blockCode !== null) {
+            loop.code = blockCode;
             executeForeachLoop(loop, (code) => {
               evalPhpJs(code, preTemplateContainer, currentLine);
             });
@@ -500,16 +576,12 @@ export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null,
       }
       
       // Handle function definitions
-      if (line.toLowerCase().startsWith('function')) {
+      if (stmt.type === 'block' && line.toLowerCase().startsWith('function')) {
         const funcDef = parseFunctionDefinition(line);
         if (funcDef) {
-          let bracePos = stmt.endPos;
-          while (bracePos < codeWithoutComments.length && codeWithoutComments[bracePos] !== '{') {
-            bracePos++;
-          }
-          const block = parseCodeBlock(codeWithoutComments, bracePos);
-          if (block) {
-            defineFunction(funcDef.name, funcDef.params, block.code);
+          const blockCode = extractBlockFromStatement(line);
+          if (blockCode !== null) {
+            defineFunction(funcDef.name, funcDef.params, blockCode);
           }
           i++;
           continue;
@@ -581,38 +653,40 @@ export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null,
       
       i++;
     } catch (error: any) {
-      // If it's a return statement outside a function, that's an error
+      // Re-throw ReturnException so it can propagate to callFunction
       if (error instanceof ReturnException) {
-        const errorMsg = formatError({
-          message: "return statement outside function",
-          line: currentLine,
-          code: "SYNTAX_ERROR",
-          context: line
-        });
-        if (preTemplateContainer) {
-          preTemplateContainer.innerHTML += errorMsg;
-        }
-      } else {
-        const errorMsg = formatError({
-          message: error.message || "Unknown error",
-          line: currentLine,
-          code: "RUNTIME_ERROR",
-          context: line
-        });
-        if (preTemplateContainer) {
-          preTemplateContainer.innerHTML += errorMsg;
-        }
+        throw error;
+      }
+      const errorMsg = formatError({
+        message: error.message || "Unknown error",
+        line: currentLine,
+        code: "RUNTIME_ERROR",
+        context: line
+      });
+      if (preTemplateContainer) {
+        preTemplateContainer.innerHTML += errorMsg;
       }
       i++;
     }
   }
 }
 
+// Decode HTML entities that browsers may encode in innerHTML
+function decodeHtmlEntities(html: string): string {
+  return html
+    .replace(/&gt;/g, '>')
+    .replace(/&lt;/g, '<')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
 export function handlePhpjsElement(el: Element) {
   if (processedPhpjs.has(el)) return;
   processedPhpjs.add(el);
 
-  const phpCode = el.innerHTML || '';
+  const phpCode = decodeHtmlEntities(el.innerHTML || '');
 
   const templateId = el.getAttribute('data-phpjs-tag-id');
 
@@ -628,6 +702,22 @@ export function handlePhpjsElement(el: Element) {
       }
     } else {
       evalPhpJs(phpCode, null);
+    }
+  } catch (error: any) {
+    // Handle return statement outside function at the top level
+    if (error instanceof ReturnException) {
+      const preTemplateContainer = templateId 
+        ? document.querySelector(`div[data-phpjs-tag-id="${templateId}"]`)
+        : null;
+      const errorMsg = formatError({
+        message: "return statement outside function",
+        code: "SYNTAX_ERROR"
+      });
+      if (preTemplateContainer) {
+        preTemplateContainer.innerHTML += errorMsg;
+      }
+    } else {
+      throw error; // Re-throw other errors
     }
   } finally {
     // Maintain global scope so variables persist across templates
