@@ -18,7 +18,7 @@ export function handleTemplateLiteral(value: string) {
 }
 
 export function handleVariable(variable: string, value: string) {
-  variables.set(variable.trim(), getStringFromQuotes(value));
+  variables.set(variable.trim(), handleVariableValue(variable, value));
 }
 
 function tokenizeLine(line: string) {
@@ -60,6 +60,25 @@ function getStringFromQuotes(str: string) {
   return str.split('"')[1]?.split('"')[0] || str.split("'")[1]?.split("'")[0];
 }
 
+export function handleVariableValue(variable: string, value: string) {
+  const trimmedValue = value.trim();
+  
+  // Check if it's a quoted string
+  if ((trimmedValue.startsWith('"') && trimmedValue.endsWith('"')) ||
+      (trimmedValue.startsWith("'") && trimmedValue.endsWith("'"))) {
+    return trimmedValue.slice(1, -1);
+  }
+  
+  // Try to parse as a number
+  const numValue = Number(trimmedValue);
+  if (!isNaN(numValue) && trimmedValue !== '') {
+    return String(numValue);
+  }
+  
+  // If it's not a number and not quoted, it's an error
+  return "<span style='color: red;font-weight: bold;text-transform: uppercase;text-decoration: underline;'>Error: Unrecognized variable value</span>";
+}
+
 export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null) {
   const trimedPHPCode: string = phpCode.trim();
   
@@ -68,7 +87,7 @@ export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null)
     if (!(line.length > 0)) return;
 
     const lineArr: Array<string> = tokenizeLine(line);
-    // console.log(lineArr);
+    // // console.log(lineArr);
     
     switch (lineArr[0].toLowerCase()) {
       case 'echo':

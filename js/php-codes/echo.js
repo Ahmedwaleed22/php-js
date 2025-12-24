@@ -3,6 +3,6 @@ export function handleEcho(concatinatedString, preTemplateContainer) {
         preTemplateContainer.innerHTML += concatinatedString;
     }
     else {
-        console.log(concatinatedString);
+        // console.log(concatinatedString);
     }
 }

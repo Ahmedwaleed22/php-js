@@ -10,7 +10,7 @@ export function handleConcatination(extractString: Array<string>, preTemplateCon
       resultString += handleTemplateLiteral(string);
     }
   });
-  console.log(resultString);
+  // console.log(resultString);
 
   return resultString;
 }

@@ -7,6 +7,6 @@ export function handleConcatination(extractString, preTemplateContainer) {
             resultString += handleTemplateLiteral(string);
         }
     });
-    console.log(resultString);
+    // console.log(resultString);
     return resultString;
 }

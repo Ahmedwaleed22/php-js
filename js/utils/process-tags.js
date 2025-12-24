@@ -57,12 +57,12 @@ export function evalPhpJs(phpCode) {
         if (!(line.length > 0))
             return;
         const lineArr = tokenizeLine(line);
-        // console.log(lineArr);
+        // // console.log(lineArr);
         switch (lineArr[0].toLowerCase()) {
             case 'echo':
-                // console.log(handleTemplateLiteral(lineArr[1] || '').trim());
+                // // console.log(handleTemplateLiteral(lineArr[1] || '').trim());
                 const templateLiteral = handleTemplateLiteral(lineArr[1] || '').trim();
-                console.log(templateLiteral);
+                // console.log(templateLiteral);
                 break;
             default:
                 if (lineArr[0].startsWith('$')) {

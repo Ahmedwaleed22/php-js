@@ -4,6 +4,6 @@ export function handleEcho(concatinatedString: string, preTemplateContainer: Ele
   if (preTemplateContainer) {
     preTemplateContainer.innerHTML += concatinatedString;
   } else {
-    console.log(concatinatedString);
+    // console.log(concatinatedString);
   }
 }
