@@ -476,17 +476,17 @@ export function evalPhpJs(phpCode, preTemplateContainer, lineOffset = 0) {
             switch (lineArr[0].toLowerCase()) {
                 case 'echo':
                     const extractString = lineArr.splice(1, lineArr.length - 1);
-                    // Join tokens back into a string to preserve operators and expressions
-                    const joinedExpression = extractString.join(' ').trim();
-                    // Check if it's a pure expression (no concatenation operator)
-                    if (!joinedExpression.includes('.')) {
-                        // Single expression - evaluate it
-                        const evaluated = evaluateExpression(joinedExpression);
-                        const result = evaluated !== null && evaluated !== undefined ? String(evaluated) : joinedExpression;
+                    // Check if this is a concatenation (contains . operator) or a single expression
+                    const hasConcat = extractString.some(token => token === '.');
+                    if (!hasConcat && extractString.length > 1) {
+                        // No concatenation operator, but multiple tokens - join them as an expression
+                        const expression = extractString.join(' ').trim();
+                        const evaluated = evaluateExpression(expression);
+                        const result = evaluated !== null && evaluated !== undefined ? String(evaluated) : expression;
                         handleEcho(result, preTemplateContainer);
                     }
                     else {
-                        // Concatenation with . operator - use handleConcatination
+                        // Has concatenation operator or single token - use handleConcatination
                         const concatinatedString = handleConcatination(extractString, preTemplateContainer) || '';
                         handleEcho(concatinatedString, preTemplateContainer);
                     }
