@@ -552,6 +552,36 @@ export function evalPhpJs(phpCode, preTemplateContainer, lineOffset = 0) {
                     }
                     break;
                 default:
+                    // Handle increment/decrement operators ($i++ or $i--)
+                    const incrMatch = line.match(/^\$(\w+)\s*\+\+/);
+                    if (incrMatch) {
+                        const varName = incrMatch[1];
+                        const currentVal = Number(getVariableFromScope(varName) || 0);
+                        setVariableInScope(varName, String(currentVal + 1));
+                        break;
+                    }
+                    const decrMatch = line.match(/^\$(\w+)\s*--/);
+                    if (decrMatch) {
+                        const varName = decrMatch[1];
+                        const currentVal = Number(getVariableFromScope(varName) || 0);
+                        setVariableInScope(varName, String(currentVal - 1));
+                        break;
+                    }
+                    // Handle prefix increment/decrement (++$i or --$i)
+                    const prefixIncrMatch = line.match(/^\+\+\s*\$(\w+)/);
+                    if (prefixIncrMatch) {
+                        const varName = prefixIncrMatch[1];
+                        const currentVal = Number(getVariableFromScope(varName) || 0);
+                        setVariableInScope(varName, String(currentVal + 1));
+                        break;
+                    }
+                    const prefixDecrMatch = line.match(/^--\s*\$(\w+)/);
+                    if (prefixDecrMatch) {
+                        const varName = prefixDecrMatch[1];
+                        const currentVal = Number(getVariableFromScope(varName) || 0);
+                        setVariableInScope(varName, String(currentVal - 1));
+                        break;
+                    }
                     // Handle function calls (only if not already handled by echo)
                     const funcCall = parseFunctionCall(line);
                     if (funcCall) {
