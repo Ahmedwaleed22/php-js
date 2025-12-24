@@ -1,0 +1,9 @@
+// greet.phpjs - Example external PHP-JS file
+
+function greet($name) {
+  return "Hello, " . $name;
+}
+
+echo greet("John");
+echo "<br />";
+echo "This code was loaded from an external .phpjs file!";

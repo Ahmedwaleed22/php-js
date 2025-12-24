@@ -720,7 +720,12 @@ export function handlePhpjsElement(el: Element) {
   if (processedPhpjs.has(el)) return;
   processedPhpjs.add(el);
 
-  const phpCode = decodeHtmlEntities(el.innerHTML || '');
+  // For script tags, use textContent (no HTML encoding)
+  // For template tags (legacy), use innerHTML with decoding
+  const isScript = el.tagName.toLowerCase() === 'script';
+  const phpCode = isScript 
+    ? (el.textContent || '') 
+    : decodeHtmlEntities(el.innerHTML || '');
 
   const templateId = el.getAttribute('data-phpjs-tag-id');
 
@@ -755,6 +760,32 @@ export function handlePhpjsElement(el: Element) {
     }
   } finally {
     // Maintain global scope so variables persist across templates
+    currentScope = globalScope;
+  }
+}
+
+// Handle raw PHP-JS code with an optional container (used for external file loading)
+export function handlePhpjsCode(phpCode: string, preTemplateContainer: Element | null): void {
+  // Use the global scope
+  currentScope = globalScope;
+
+  try {
+    evalPhpJs(phpCode, preTemplateContainer);
+  } catch (error: any) {
+    // Handle return statement outside function at the top level
+    if (error instanceof ReturnException) {
+      const errorMsg = formatError({
+        message: "return statement outside function",
+        code: "SYNTAX_ERROR"
+      });
+      if (preTemplateContainer) {
+        preTemplateContainer.innerHTML += errorMsg;
+      }
+    } else {
+      throw error; // Re-throw other errors
+    }
+  } finally {
+    // Maintain global scope so variables persist
     currentScope = globalScope;
   }
 }

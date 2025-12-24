@@ -13,7 +13,8 @@ A lightweight PHP-to-JavaScript transpiler that allows you to write PHP-like cod
 - **Loops**: `for`, `while`, `foreach` loops
 - **Arrays**: Array creation and manipulation
 - **Expression Evaluation**: Complex expressions with operators
-- **Template-based**: Process PHP code within HTML `<template>` tags
+- **External Files**: Load PHP-JS code from external `.phpjs` files
+- **Script-based**: Use familiar `<script>` tags with `type="text/phpjs"`
 
 ## Getting Started
 
@@ -42,77 +43,98 @@ yarn build
 <script type="module" src="./js/phpjs.js"></script>
 ```
 
-2. Write PHP-like code in `<template data-phpjs>` tags:
+2. Write PHP-like code in `<script type="text/phpjs">` tags:
 ```html
-<template data-phpjs>
+<script type="text/phpjs">
   $name = "John Doe";
   echo "<h1>Hello $name</h1>";
   echo 'Hi ' . $name;
-</template>
+</script>
 ```
 
-3. The code will be executed and the output will be rendered in place of the template.
+3. Or load PHP-JS code from an external file:
+```html
+<script type="text/phpjs" src="./path/to/file.phpjs"></script>
+```
+
+4. The code will be executed and the output will be rendered in place of the script tag.
 
 ## Examples
 
 ### Variables and Echo
 ```html
-<template data-phpjs>
+<script type="text/phpjs">
   $name = "Jane Doe";
   $age = 25;
   echo "My name is $name and I am $age years old";
-</template>
+</script>
 ```
 
 ### String Concatenation
 ```html
-<template data-phpjs>
+<script type="text/phpjs">
   $greeting = "Hello";
   $name = "World";
   echo $greeting . " " . $name;
-</template>
+</script>
 ```
 
 ### Functions
 ```html
-<template data-phpjs>
+<script type="text/phpjs">
   function greet($name) {
     return "Hello, " . $name;
   }
   
   echo greet("John");
-</template>
+</script>
 ```
 
 ### Conditionals
 ```html
-<template data-phpjs>
+<script type="text/phpjs">
   $age = 18;
   if ($age >= 18) {
     echo "You are an adult";
   } else {
     echo "You are a minor";
   }
-</template>
+</script>
 ```
 
 ### Loops
 ```html
-<template data-phpjs>
+<script type="text/phpjs">
   for ($i = 1; $i <= 5; $i++) {
     echo "Number: $i<br />";
   }
-</template>
+</script>
 ```
 
 ### Arrays
 ```html
-<template data-phpjs>
+<script type="text/phpjs">
   $fruits = ["apple", "banana", "orange"];
   foreach ($fruits as $fruit) {
     echo $fruit . "<br />";
   }
-</template>
+</script>
+```
+
+### External Files
+Create a `.phpjs` file:
+```php
+// greet.phpjs
+function greet($name) {
+  return "Hello, " . $name;
+}
+
+echo greet("John");
+```
+
+Then include it in your HTML:
+```html
+<script type="text/phpjs" src="./greet.phpjs"></script>
 ```
 
 ## Project Structure
@@ -135,6 +157,7 @@ php-js/
 │       ├── reading-tags.ts
 │       └── string-functions.ts
 ├── js/                   # Compiled JavaScript files
+├── examples/             # Example PHP-JS files
 ├── index.html            # Example HTML file
 ├── tsconfig.json         # TypeScript configuration
 └── package.json          # Project dependencies
@@ -156,11 +179,12 @@ yarn watch
 
 ## How It Works
 
-1. The library scans the DOM for `<template data-phpjs>` elements
-2. Each template's content is parsed as PHP-like code
-3. The code is executed in a JavaScript context with PHP-like semantics
-4. Output from `echo` statements replaces the template element
-5. Variables are scoped per template execution
+1. The library scans the DOM for `<script type="text/phpjs">` elements
+2. For inline scripts, the content is parsed as PHP-like code
+3. For external scripts (with `src` attribute), the file is fetched and parsed
+4. The code is executed in a JavaScript context with PHP-like semantics
+5. Output from `echo` statements is inserted before the script element
+6. Variables are shared across all scripts on the page (global scope)
 
 ## Supported Features
 

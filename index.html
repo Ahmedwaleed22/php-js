@@ -3,38 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>PHP-JS Demo</title>
     <script type="module" src="./js/phpjs.js"></script>
   </head>
   <body>
-    <template data-phpjs>
-      function greet($name) {
-        return "Hello, " . $name;
-      }
-      
-      echo greet("John");
-    </template>
+    <!-- External PHP-JS file -->
+    <script type="text/phpjs" src="./examples/greet.phpjs"></script>
 
-    <template data-phpjs>
+    <!-- Inline PHP-JS code -->
+    <script type="text/phpjs">
       $age = 18;
       if ($age >= 18) {
         echo "You are an adult";
       } else {
         echo "You are a minor";
       }
-    </template>
+    </script>
 
-    <template data-phpjs>
+    <script type="text/phpjs">
       for ($i = 1; $i <= 15; $i++) {
         echo "Number: $i<br />";
       }
-    </template>
+    </script>
     
-    <template data-phpjs>
+    <script type="text/phpjs">
       $fruits = ["apple", "banana", "orange"];
       foreach ($fruits as $fruit) {
         echo $fruit . "<br />";
       }
-    </template>
+    </script>
   </body>
 </html>

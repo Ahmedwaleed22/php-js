@@ -1,8 +1,5 @@
-import { handlePhpjsElement } from './utils/process-phpjs-tags.js';
-import { scanForPhpjs } from './utils/reading-tags.js';
+import { processAllPhpjs } from './utils/reading-tags.js';
 
-const phpjs = scanForPhpjs(document.body);
-for (let i = 0; i < phpjs.length; i++) {
-  const phpjsElement = phpjs[i];
-  handlePhpjsElement(phpjsElement);
-}
+// Process all PHP-JS scripts (handles both inline and external files)
+// The reading-tags module auto-runs on DOMContentLoaded, but we can also trigger manually
+processAllPhpjs();
