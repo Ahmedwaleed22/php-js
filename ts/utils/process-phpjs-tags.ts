@@ -65,11 +65,14 @@ export function evalPhpJs(phpCode: string) {
     if (!(line.length > 0)) return;
 
     const lineArr: Array<string> = tokenizeLine(line);
-    console.log(lineArr);
+    // console.log(lineArr);
     
     switch (lineArr[0].toLowerCase()) {
       case 'echo':
-        console.log(handleTemplateLiteral(lineArr[1] || '').trim());
+        // console.log(handleTemplateLiteral(lineArr[1] || '').trim());
+        const templateLiteral = handleTemplateLiteral(lineArr[1] || '').trim();
+        console.log(templateLiteral);
+        
         break;
       default:
         if (lineArr[0].startsWith('$')) {
@@ -84,6 +87,6 @@ export function handlePhpjsElement(el: Element) {
   if (processedPhpjs.has(el)) return;
   processedPhpjs.add(el);
 
-  const phpCode = el.innerHTML;
+  const phpCode = el.innerHTML || '';
   evalPhpJs(phpCode);
 }

@@ -76,6 +76,6 @@ export function handlePhpjsElement(el) {
     if (processedPhpjs.has(el))
         return;
     processedPhpjs.add(el);
-    const phpCode = el.innerHTML;
+    const phpCode = el.innerHTML || '';
     evalPhpJs(phpCode);
 }

@@ -1,13 +1,10 @@
-import { handlePhpjsElement } from './process-tags.js';
+import { handlePhpjsElement } from './process-phpjs-tags.js';
 // Exported so it can be imported from `phpjs.ts`
 export function scanForPhpjs(root = document) {
     // Narrow to a type that definitely has getElementsByTagName
     const container = root;
-    const phpjs = container.getElementsByTagName('phpjs');
-    // for (let i = 0; i < phpjs.length; i++) {
-    //   handlePhpjsElement(phpjs[i]);
-    // }
-    return phpjs;
+    const phpjs = container.querySelector('template[data-phpjs]');
+    return phpjs ? [phpjs] : [];
 }
 // Run once when the DOM is ready so we catch any <phpjs> already in the page
 if (document.readyState === 'loading') {
@@ -25,7 +22,7 @@ const observer = new MutationObserver(mutations => {
                 return;
             const el = node;
             // If the added node itself is <phpjs>, handle it
-            if (el.tagName.toLowerCase() === 'phpjs') {
+            if (el.tagName.toLowerCase() === 'template' && el.getAttribute('data-phpjs')) {
                 handlePhpjsElement(el);
             }
             // Also scan inside it for any nested <phpjs>
