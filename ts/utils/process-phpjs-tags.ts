@@ -57,7 +57,7 @@ function getStringFromQuotes(str: string) {
   return str.split('"')[1]?.split('"')[0] || str.split("'")[1]?.split("'")[0];
 }
 
-export function evalPhpJs(phpCode: string) {
+export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null) {
   const trimedPHPCode: string = phpCode.trim();
   
   trimedPHPCode.split(';').forEach((line: string) => {
@@ -72,7 +72,10 @@ export function evalPhpJs(phpCode: string) {
         // console.log(handleTemplateLiteral(lineArr[1] || '').trim());
         const templateLiteral = handleTemplateLiteral(lineArr[1] || '').trim();
         console.log(templateLiteral);
-        
+
+        if (preTemplateContainer) {
+          preTemplateContainer.innerHTML += templateLiteral;
+        }
         break;
       default:
         if (lineArr[0].startsWith('$')) {
@@ -88,5 +91,15 @@ export function handlePhpjsElement(el: Element) {
   processedPhpjs.add(el);
 
   const phpCode = el.innerHTML || '';
-  evalPhpJs(phpCode);
+
+  const templateId = el.getAttribute('data-phpjs-tag-id');
+
+  if (templateId) {
+    const preTemplateContainer = document.querySelector(`div[data-phpjs-tag-id="${templateId}"]`);
+    if (preTemplateContainer) {
+      evalPhpJs(phpCode, preTemplateContainer);
+    }
+  } else {
+    evalPhpJs(phpCode, null);
+  }
 }
