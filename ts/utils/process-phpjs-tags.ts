@@ -18,7 +18,7 @@ export function handleTemplateLiteral(value: string) {
 }
 
 export function handleVariable(variable: string, value: string) {
-  variables.set(variable.trim(), handleVariableValue(variable, value));
+  variables.set(variable.trim(), handleVariableValue(value.trim()));
 }
 
 function tokenizeLine(line: string) {
@@ -60,7 +60,7 @@ function getStringFromQuotes(str: string) {
   return str.split('"')[1]?.split('"')[0] || str.split("'")[1]?.split("'")[0];
 }
 
-export function handleVariableValue(variable: string, value: string) {
+export function handleVariableValue(value: string) {
   const trimmedValue = value.trim();
   
   // Check if it's a quoted string

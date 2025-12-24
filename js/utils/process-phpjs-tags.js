@@ -15,7 +15,7 @@ export function handleTemplateLiteral(value) {
     return replaced.replace(/\u0000/g, '$');
 }
 export function handleVariable(variable, value) {
-    variables.set(variable.trim(), handleVariableValue(variable, value));
+    variables.set(variable.trim(), handleVariableValue(value.trim()));
 }
 function tokenizeLine(line) {
     const lineArr = [];
@@ -52,7 +52,7 @@ function getStringFromQuotes(str) {
     var _a, _b;
     return ((_a = str.split('"')[1]) === null || _a === void 0 ? void 0 : _a.split('"')[0]) || ((_b = str.split("'")[1]) === null || _b === void 0 ? void 0 : _b.split("'")[0]);
 }
-export function handleVariableValue(variable, value) {
+export function handleVariableValue(value) {
     const trimmedValue = value.trim();
     // Check if it's a quoted string
     if ((trimmedValue.startsWith('"') && trimmedValue.endsWith('"')) ||
