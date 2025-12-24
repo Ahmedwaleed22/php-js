@@ -79,6 +79,10 @@ export function handleVariableValue(value: string) {
   return "<span style='color: red;font-weight: bold;text-transform: uppercase;text-decoration: underline;'>Error: Unrecognized variable value</span>";
 }
 
+export function getVariableValue(varName: string): string | undefined {
+  return variables.get(varName);
+}
+
 export function evalPhpJs(phpCode: string, preTemplateContainer: Element | null) {
   const trimedPHPCode: string = phpCode.trim();
   

@@ -67,6 +67,9 @@ export function handleVariableValue(value) {
     // If it's not a number and not quoted, it's an error
     return "<span style='color: red;font-weight: bold;text-transform: uppercase;text-decoration: underline;'>Error: Unrecognized variable value</span>";
 }
+export function getVariableValue(varName) {
+    return variables.get(varName);
+}
 export function evalPhpJs(phpCode, preTemplateContainer) {
     const trimedPHPCode = phpCode.trim();
     trimedPHPCode.split(';').forEach((line) => {

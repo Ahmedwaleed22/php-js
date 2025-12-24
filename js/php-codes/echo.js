@@ -1,8 +1,8 @@
-export function handleEcho(concatinatedString, preTemplateContainer) {
+export function handleEcho(stringToEcho, preTemplateContainer) {
     if (preTemplateContainer) {
-        preTemplateContainer.innerHTML += concatinatedString;
+        preTemplateContainer.innerHTML += stringToEcho;
     }
     else {
-        // console.log(concatinatedString);
+        // console.log(stringToEcho);
     }
 }
