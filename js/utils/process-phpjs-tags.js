@@ -476,8 +476,20 @@ export function evalPhpJs(phpCode, preTemplateContainer, lineOffset = 0) {
             switch (lineArr[0].toLowerCase()) {
                 case 'echo':
                     const extractString = lineArr.splice(1, lineArr.length - 1);
-                    const concatinatedString = handleConcatination(extractString, preTemplateContainer) || '';
-                    handleEcho(concatinatedString, preTemplateContainer);
+                    // Join tokens back into a string to preserve operators and expressions
+                    const joinedExpression = extractString.join(' ').trim();
+                    // Check if it's a pure expression (no concatenation operator)
+                    if (!joinedExpression.includes('.')) {
+                        // Single expression - evaluate it
+                        const evaluated = evaluateExpression(joinedExpression);
+                        const result = evaluated !== null && evaluated !== undefined ? String(evaluated) : joinedExpression;
+                        handleEcho(result, preTemplateContainer);
+                    }
+                    else {
+                        // Concatenation with . operator - use handleConcatination
+                        const concatinatedString = handleConcatination(extractString, preTemplateContainer) || '';
+                        handleEcho(concatinatedString, preTemplateContainer);
+                    }
                     break;
                 default:
                     if (lineArr[0].startsWith('$')) {
