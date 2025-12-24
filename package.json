@@ -1,0 +1,26 @@
+{
+  "name": "php-js",
+  "version": "1.0.0",
+  "description": "A lightweight PHP-to-JavaScript transpiler for the browser",
+  "main": "js/phpjs.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf js"
+  },
+  "keywords": [
+    "php",
+    "javascript",
+    "transpiler",
+    "interpreter",
+    "browser",
+    "template"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
+

@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+yarn.lock
+package-lock.json
+
+# Build outputs
+js/
+*.js.map
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# TypeScript
+*.tsbuildinfo
+
