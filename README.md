@@ -21,7 +21,7 @@ A lightweight PHP-to-JavaScript transpiler that allows you to write PHP-like cod
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/Ahmedwaleed22/php-js
 cd php-js
 ```
 
