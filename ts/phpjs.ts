@@ -1,31 +1,31 @@
-// Keep track of which <phjs> elements we've already handled
-const processedPhjs = new WeakSet<Element>();
+// Keep track of which <phpjs> elements we've already handled
+const processedPhpjs = new WeakSet<Element>();
 
-function handlePhjsElement(el: Element) {
-  if (processedPhjs.has(el)) return;
-  processedPhjs.add(el);
+function handlePhpjsElement(el: Element) {
+  if (processedPhpjs.has(el)) return;
+  processedPhpjs.add(el);
 
   const phpCode = el.innerHTML;
   console.log(phpCode);
 }
 
-function scanForPhjs(root: ParentNode | Document = document) {
+function scanForPhpjs(root: ParentNode | Document = document) {
   // Narrow to a type that definitely has getElementsByTagName
   const container = root as Document | Element;
-  const phjs = container.getElementsByTagName('phjs');
-  for (let i = 0; i < phjs.length; i++) {
-    handlePhjsElement(phjs[i]);
+  const phpjs = container.getElementsByTagName('phpjs');
+  for (let i = 0; i < phpjs.length; i++) {
+    handlePhpjsElement(phpjs[i]);
   }
 }
 
-// Run once when the DOM is ready so we catch any <phjs> already in the page
+// Run once when the DOM is ready so we catch any <phpjs> already in the page
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => scanForPhjs());
+  document.addEventListener('DOMContentLoaded', () => scanForPhpjs());
 } else {
-  scanForPhjs();
+  scanForPhpjs();
 }
 
-// Watch for any new <phjs> tags added after this script is loaded
+// Watch for any new <phpjs> tags added after this script is loaded
 const observer = new MutationObserver(mutations => {
   for (const mutation of mutations) {
     // Check newly added nodes
@@ -33,13 +33,13 @@ const observer = new MutationObserver(mutations => {
       if (node.nodeType !== Node.ELEMENT_NODE) return;
       const el = node as Element;
 
-      // If the added node itself is <phjs>, handle it
-      if (el.tagName.toLowerCase() === 'phjs') {
-        handlePhjsElement(el);
+      // If the added node itself is <phpjs>, handle it
+      if (el.tagName.toLowerCase() === 'phpjs') {
+        handlePhpjsElement(el);
       }
 
-      // Also scan inside it for any nested <phjs>
-      scanForPhjs(el);
+      // Also scan inside it for any nested <phpjs>
+      scanForPhpjs(el);
     });
   }
 });
